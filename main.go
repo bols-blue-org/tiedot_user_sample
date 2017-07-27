@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/HouzuoGuo/tiedot/db"
 )
@@ -28,7 +27,6 @@ func initDB(myDB *db.DB) bool {
 		} else if name == "CollectionDefault" {
 			noCollectionDefaultCollection = false
 		}
-		fmt.Printf("I have a collection called %s\n", name)
 	}
 
 	if noUserCollection {
@@ -46,20 +44,10 @@ func initDB(myDB *db.DB) bool {
 	return noUserCollection || noCollectionDefaultCollection
 }
 
-/*
-In embedded usage, you are encouraged to use all public functions concurrently.
-However please do not use public functions in "data" package by yourself - you most likely will not need to use them directly.
-To compile and run the example:
-    go build && ./tiedot -mode=example
-It may require as much as 1.5GB of free disk space in order to run the example.
-*/
-
 func main() {
 	// ****************** Collection Management ******************
 
 	myDBDir := "./tmp/MyDatabase"
-	os.RemoveAll(myDBDir)
-	defer os.RemoveAll(myDBDir)
 
 	// (Create if not exist) open a database
 	myDB, err := db.OpenDB(myDBDir)
@@ -126,13 +114,15 @@ func main() {
 	}
 
 	// ****************** Queries ******************
+	tmp := map[string]interface{}{"Owner": "user1", "Group": "test", "Acl": "0777" }
 	// Prepare some documents for the query
-	feeds.Insert(map[string]interface{}{"Title": "New Go release", "Source": "golang.org", "Age": 3})
-	feeds.Insert(map[string]interface{}{"Title": "Kitkat is here", "Source": "google.com", "Age": 2})
-	feeds.Insert(map[string]interface{}{"Title": "Good Slackware", "Source": "slackware.com", "Age": 1})
+	feeds.Insert(map[string]interface{}{"Title": "New Go release", "Source": "golang.org", "Age": 3, "MetaData": tmp})
+	feeds.Insert(map[string]interface{}{"Title": "Kitkat is here", "Source": "google.com", "Age": 2, "MetaData": tmp})
+	tmp = map[string]interface{}{"Owner": "user3", "Group": "test", "Acl": "0777" }
+	feeds.Insert(map[string]interface{}{"Title": "Good Slackware", "Source": "slackware.com", "Age": 1,"MetaData": tmp})
 
 	var query interface{}
-	json.Unmarshal([]byte(`[{"eq": "New Go release", "in": ["Title"]}, {"eq": "slackware.com", "in": ["Source"]}]`), &query)
+	json.Unmarshal([]byte(`[{"eq": "New Go release", "in": ["Title"]}, {"eq": "user3", "in": ["MetaData.Owner"]}]`), &query)
 
 	queryResult := make(map[int]struct{}) // query result (document IDs) goes into map keys
 
